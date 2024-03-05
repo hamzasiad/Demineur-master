@@ -1,56 +1,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <utilapiset.h>
 
-#define SIZE 10
+#define TAILLE 10
 
-void initializeGrid(char grid[SIZE][SIZE]) {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            grid[i][j] = '  ';
-            //sprintf(grid[i][j], "%d", i);
-
+void initialiserGrille(char grille[TAILLE][TAILLE]) {
+    for (int i = 0; i < TAILLE; i++) {
+        for (int j = 0; j < TAILLE; j++) {
+            grille[i][j] = '  ';
         }
     }
 }
 
-void placeMines(char grid[SIZE][SIZE], int numMines) {
+void placerMines(char grille[TAILLE][TAILLE], int nbMines) {
     int count = 0;
-    while (count < numMines) {
-        int x = rand() % SIZE;
-        int y = rand() % SIZE;
-        if (grid[x][y] != 'm') {
-            grid[x][y] = 'm';
+    while (count < nbMines) {
+        int x = rand() % TAILLE;
+        int y = rand() % TAILLE;
+        if (grille[x][y] != 'm') {
+            grille[x][y] = 'm';
             count++;
         }
     }
 }
 
-void printGrid(char grid[SIZE][SIZE], int showMines) {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            if (grid[i][j] == 'v') {
-                printf("   ");  // Display spaces for visited cells
-            } else if (grid[i][j] == 'm' && showMines) {
-                printf("[m] ");
-            } else if (grid[i][j] == 'm') {
-                printf("[ ] ", i, j);  // Display empty string instead of '[m]' until the player loses
-            } else {
-                printf("[%c] ", grid[i][j]);
-                //printf("[%d:%d] ", i,j);
-            }
-        }
-        printf("\n");
-    }
-}
-
-int countMines(char grid[SIZE][SIZE], int x, int y) {
+int compterMines(char grille[TAILLE][TAILLE], int x, int y) {
     int count = 0;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             int newX = x + i;
             int newY = y + j;
-            if (newX >= 0 && newX < SIZE && newY >= 0 && newY < SIZE && grid[newX][newY] == 'm') {
+            if (newX >= 0 && newX < TAILLE && newY >= 0 && newY < TAILLE && grille[newX][newY] == 'm') {
                 count++;
             }
         }
@@ -58,19 +39,45 @@ int countMines(char grid[SIZE][SIZE], int x, int y) {
     return count;
 }
 
-void revealEmptyCells(char grid[SIZE][SIZE], int x, int y) {
-    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE || grid[x][y] != ' ') {
+void afficherGrille(char grille[TAILLE][TAILLE], int montrerMines) {
+    for (int i = 0; i < TAILLE; i++) {
+        for (int j = 0; j < TAILLE; j++) {
+            if (grille[i][j] == 'v') {
+                printf("[   ] ");
+            } else if (grille[i][j] == 'm' && montrerMines) {
+                printf("[ m ] ");
+            } else if (grille[i][j] == 'r') {
+                if (compterMines(grille, i, j) != 0) {
+                    printf("[ %d ] ", compterMines(grille, i, j));
+                } else {
+                    printf("[   ] ");
+                }
+            } else if (grille[i][j] == '*') {
+                printf("[ * ] ");
+            }  else if (grille[i][j] == 'd') {
+                printf("[ d ] ");
+            }else {
+                printf("[%d:%d] ", i, j);
+            }
+        }
+        printf("\n");
+    }
+    Beep(500, 500);
+}
+
+void revelerCellulesVides(char grille[TAILLE][TAILLE], int x, int y) {
+    if (x < 0 || x >= TAILLE || y < 0 || y >= TAILLE || grille[x][y] != ' ') {
         return;
     }
 
-    int mines = countMines(grid, x, y);
+    int mines = compterMines(grille, x, y);
     if (mines > 0) {
-        grid[x][y] = mines + '0';
+        grille[x][y] = mines + '0';
     } else {
-        grid[x][y] = 'v';  // 'v' for visited
+        grille[x][y] = 'v';  // 'v' for visitee
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
-                revealEmptyCells(grid, x + i, y + j);
+                revelerCellulesVides(grille, x + i, y + j);
             }
         }
     }
@@ -79,78 +86,74 @@ void revealEmptyCells(char grid[SIZE][SIZE], int x, int y) {
 int main() {
     srand(time(NULL));
 
-    char grid[SIZE][SIZE];
-    int remainingCells;
+    char grille[TAILLE][TAILLE];
+    int cellulesRestantes;
 
     do {
-        initializeGrid(grid);
+        initialiserGrille(grille);
 
-        int difficulty;
-        printf("Choose difficulty (1, 2, or 3): ");
-        scanf("%d", &difficulty);
+        int difficulte;
+        printf("Choisissez la difficulte (1, 2 ou 3) : ");
+        scanf("%d", &difficulte);
 
-        int numMines = 10 * difficulty;
-        placeMines(grid, numMines);
+        int nbMines = 10 * difficulte;
+        placerMines(grille, nbMines);
 
-        remainingCells = SIZE * SIZE - numMines;
+        cellulesRestantes = TAILLE * TAILLE - nbMines;
 
-        // Print the initial grid with coordinates
-        printGrid(grid, 0);
+        afficherGrille(grille, 0);
 
         while (1) {
-            int row, col;
+            int ligne, colonne;
             char action;
-            printf("Choose a row, column, and action (0-%d) (Format: row col action (f for flag, u for unflag, r for reveal)): ",
-                   SIZE - 1);
-            int result = scanf("%d %d %c", &row, &col, &action);
+            printf("Choisissez une ligne, une colonne et une action (0-%d) (Format : ligne colonne action (f pour drapeau, u pour de-drapeau, r pour reveler)) : ",
+                   TAILLE - 1);
+            int resultat = scanf("%d %d %c", &ligne, &colonne, &action);
 
-            if (result != 3 || (action != 'f' && action != 'u' && action != 'r')) {
-                printf("Invalid input. Please enter valid coordinates and action.\n");
-                // Consume the remaining characters in the input buffer to avoid an infinite loop
+            if (resultat != 3 || (action != 'f' && action != 'u' && action != 'r')) {
+                printf("Entree invalide. Veuillez entrer des coordonnees et une action valides.\n");
                 while (getchar() != '\n');
                 continue;
             }
 
             if (action == 'f') {
-                // Flag a mine
-                if (grid[row][col] == ' ') {
-                    grid[row][col] = 'd';
+                if (grille[ligne][colonne] != 'r') {
+                    grille[ligne][colonne] = 'd';
                 }
             } else if (action == 'u') {
-                // Unflag a mine
-                if (grid[row][col] == 'd') {
-                    grid[row][col] = ' ';
+                if (grille[ligne][colonne] == 'd') {
+                    grille[ligne][colonne] = ' ';
                 }
             } else if (action == 'r') {
-                // Reveal cell
-                if (grid[row][col] == 'm') {
-                    printf("Game over! You hit a mine.\n");
-                    printGrid(grid, 1); // Reveal all mines on game over
-                    break;  // Exit the move loop on game over
-                } else if (grid[row][col] == ' ') {
-                    revealEmptyCells(grid, row, col);
-                    remainingCells--;
-
-                    if (remainingCells == 0) {
-                        printf("Congratulations! You've cleared all non-mine cells.\n");
-                        printGrid(grid, 1);  // Reveal all mines on game win
-                        break;  // Exit the move loop on game win
+                if (grille[ligne][colonne] == 'm') {
+                    printf("Partie terminee ! Vous avez touche une mine.\n");
+                    grille[ligne][colonne] = '*';
+                    afficherGrille(grille, 1);
+                    Beep(2000, 1000);
+                    break;
+                } else if (grille[ligne][colonne] == ' ') {
+                    revelerCellulesVides(grille, ligne, colonne);
+                    cellulesRestantes--;
+                    grille[ligne][colonne] = 'r';
+                    if (cellulesRestantes == 0) {
+                        printf("Felicitations ! Vous avez degage toutes les cellules non minees.\n");
+                        afficherGrille(grille, 1);
+                        Beep(2000, 1000);
+                        break;
                     }
                 }
             }
 
-            // Print the updated grid after each move
-            printGrid(grid, 0);
+            afficherGrille(grille, 0);
         }
 
-        // Ask if the player wants to play again
-        char replayChoice;
-        printf("Do you want to play again? (y/n): ");
-        scanf(" %c", &replayChoice);
+        char choixRejouer;
+        printf("Voulez-vous rejouer ? (o/n) : ");
+        scanf(" %c", &choixRejouer);
 
-        if (replayChoice != 'y' && replayChoice != 'Y') {
-            printf("Goodbye! Exiting the program.\n");
-            break;  // Exit the replay loop
+        if (choixRejouer != 'o' && choixRejouer != 'O') {
+            printf("Au revoir ! Fin du programme.\n");
+            break;
         }
 
     } while (1);
